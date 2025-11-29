@@ -1,0 +1,95 @@
+"use client";
+
+import React, { useState } from "react";
+import { MagnifyingGlassIcon, ShoppingCartIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
+
+const Navbar = () => {
+const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+const navItems = [
+{ label: "Home", href: "/" },
+{ label: "Recipes", href: "/pages/recipes" },
+{ label: "About", href: "/pages/about" },
+{ label: "Contact", href: "/pages/contact" },
+];
+
+return ( <nav className="bg-white shadow-sm px-4"> <div className="w-full px-4 lg:px-8 flex justify-center"> <div className="flex justify-between items-center w-[1200px] max-w-7xl h-16 lg:h-20">
+
+      {/* Logo */}
+      <div className="flex items-center space-x-3">
+        <span className="text-5xl font-bold text-orange-600 tracking-tight">
+          Tamato .
+        </span>
+      </div>
+
+      {/* Desktop Navigation */}
+      <div className="hidden lg:flex ml-12 flex-1 justify-center items-center space-x-8">
+        {navItems.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="group relative text-gray-700 font-light tracking-wide px-1 transition-all duration-300 hover:text-orange-600"
+          >
+            {item.label}
+            <span className="absolute left-1/2 -bottom-1 h-[2px] w-0 bg-orange-600 transition-all duration-300 group-hover:w-full group-hover:left-0"></span>
+          </Link>
+        ))}
+      </div>
+
+      {/* Right Side: Search, Cart, Sign In */}
+      <div className="hidden lg:flex items-center space-x-6">
+        <MagnifyingGlassIcon className="w-6 h-6 text-gray-700 hover:text-orange-600 transition cursor-pointer" />
+        <ShoppingCartIcon className="w-6 h-6 text-gray-700 hover:text-orange-600 transition cursor-pointer" />
+
+        <Link
+          href="/auth/signup"
+          className="bg-white border border-orange-500 text-orange-600 font-semibold px-6 py-2 rounded-full transition hover:bg-orange-50"
+        >
+          Sign In
+        </Link>
+      </div>
+
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        className="lg:hidden p-2 rounded-lg text-gray-700 hover:bg-orange-50 transition"
+      >
+        {isMenuOpen ? (
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        )}
+      </button>
+    </div>
+  </div>
+
+  {/* Mobile Menu */}
+  {isMenuOpen && (
+    <div className="lg:hidden bg-white border-t border-orange-100 py-6">
+      <div className="flex flex-col space-y-4 px-6">
+        {navItems.map((item) => (
+          <Link key={item.label} href={item.href} className="text-gray-700 text-lg py-2">
+            {item.label}
+          </Link>
+        ))}
+        <Link
+          href="/auth/signup"
+          className="bg-white border border-orange-500 text-orange-600 font-semibold px-6 py-2 rounded-full transition hover:bg-orange-50"
+        >
+          Sign In
+        </Link>
+      </div>
+    </div>
+  )}
+</nav>
+
+
+);
+};
+
+export default Navbar;
