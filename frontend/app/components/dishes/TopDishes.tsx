@@ -84,7 +84,7 @@ const dishes = [
   {
     id: 9,
     title: "Chocolate Lava Cake",
-    category: "Desert",
+    category: "Deserts",
     price: 9,
     rating: 5,
     description: "Hot lava cake with melting core.",
@@ -93,7 +93,7 @@ const dishes = [
   {
     id: 10,
     title: "Strawberry Cheesecake",
-    category: "Desert",
+    category: "Deserts",
     price: 11,
     rating: 5,
     description: "Creamy cheesecake with strawberry syrup.",
@@ -102,7 +102,7 @@ const dishes = [
   {
     id: 11,
     title: "Blueberry Mousse",
-    category: "Desert",
+    category: "Deserts",
     price: 10,
     rating: 4,
     description: "Soft mousse with blueberry flavor.",
@@ -111,7 +111,7 @@ const dishes = [
   {
     id: 12,
     title: "Vanilla Pudding Delight",
-    category: "Desert",
+    category: "Deserts",
     price: 7,
     rating: 4,
     description: "Classic vanilla pudding served chilled.",
@@ -311,7 +311,11 @@ const dishes = [
 
 // ------------------ COMPONENT ------------------
 
-export default function TopDishes() {
+interface TopDishesProps {
+  selectedCategory: string;
+}
+
+export default function TopDishes({ selectedCategory }: TopDishesProps) {
   const [qty, setQty] = useState({});
 
   const increase = (id) => {
@@ -328,77 +332,102 @@ export default function TopDishes() {
     }));
   };
 
+  // Filter dishes based on selected category
+  const filteredDishes = selectedCategory
+    ? dishes.filter(dish => dish.category === selectedCategory)
+    : dishes;
+
   return (
     <div className="w-full bg-white px-6 lg:px-16 py-10">
-      <h2 className="text-3xl font-bold text-gray-900 mb-8">Top Dishes Near You</h2>
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900">
+          {selectedCategory ? `${selectedCategory} Dishes` : "Top Dishes Near You"}
+        </h2>
+        
+        {selectedCategory && (
+          <span className="bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-medium">
+            {filteredDishes.length} {filteredDishes.length === 1 ? 'item' : 'items'}
+          </span>
+        )}
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+      {filteredDishes.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No dishes found in this category.</p>
+          <p className="text-gray-400 mt-2">Try selecting a different category.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {filteredDishes.map((dish) => (
+            <div key={dish.id} className="bg-white rounded-2xl shadow hover:shadow-lg transition overflow-hidden">
+              {/* Image */}
+              <div className="relative w-full h-52 overflow-hidden">
+                <img 
+                  src={dish.image} 
+                  alt={dish.title} 
+                  className="w-full h-full object-cover" 
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop";
+                  }}
+                />
 
-        {dishes.map((dish) => (
-          <div key={dish.id} className="bg-white rounded-2xl shadow hover:shadow-lg transition overflow-hidden">
+                {/* Category Badge */}
+                <div className="absolute top-3 left-3">
+                  <span className="bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-medium">
+                    {dish.category}
+                  </span>
+                </div>
 
-            {/* Image */}
-            <div className="relative w-full h-52 overflow-hidden">
-              <img 
-                src={dish.image} 
-                alt={dish.title} 
-                className="w-full h-full object-cover" 
-                onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop";
-                }}
-              />
+                {/* Add/Remove Buttons */}
+                <div className="absolute bottom-3 right-3 flex gap-2">
+                  {qty[dish.id] > 0 && (
+                    <button
+                      onClick={() => decrease(dish.id)}
+                      className="bg-white h-8 w-8 rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    >
+                      <MinusIcon className="h-5 w-5 text-gray-700" />
+                    </button>
+                  )}
 
-              {/* Add/Remove Buttons */}
-              <div className="absolute bottom-3 right-3 flex gap-2">
-
-                {qty[dish.id] > 0 && (
                   <button
-                    onClick={() => decrease(dish.id)}
-                    className="bg-white h-8 w-8 rounded-full shadow flex items-center justify-center"
+                    onClick={() => increase(dish.id)}
+                    className="bg-white h-8 w-8 rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition-colors"
                   >
-                    <MinusIcon className="h-5 w-5 text-gray-700" />
+                    <PlusIcon className="h-5 w-5 text-gray-700" />
                   </button>
-                )}
-
-                <button
-                  onClick={() => increase(dish.id)}
-                  className="bg-white h-8 w-8 rounded-full shadow flex items-center justify-center"
-                >
-                  <PlusIcon className="h-5 w-5 text-gray-700" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-5">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold">{dish.title}</h3>
-
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <StarIcon
-                      key={i}
-                      className={`h-5 w-5 ${i < dish.rating ? "text-orange-500" : "text-gray-300"}`}
-                    />
-                  ))}
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm mt-1">{dish.description}</p>
+              {/* Content */}
+              <div className="p-5">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold">{dish.title}</h3>
 
-              <p className="text-red-600 text-xl font-bold mt-3">${dish.price}</p>
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <StarIcon
+                        key={i}
+                        className={`h-5 w-5 ${i < dish.rating ? "text-orange-500" : "text-gray-300"}`}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-              {/* Quantity Display */}
-              {qty[dish.id] > 0 && (
-                <p className="text-sm font-semibold mt-1 text-green-600">
-                  Added: {qty[dish.id]}
-                </p>
-              )}
+                <p className="text-gray-600 text-sm mt-1">{dish.description}</p>
+
+                <p className="text-red-600 text-xl font-bold mt-3">${dish.price}</p>
+
+                {/* Quantity Display */}
+                {qty[dish.id] > 0 && (
+                  <p className="text-sm font-semibold mt-1 text-green-600">
+                    Added: {qty[dish.id]}
+                  </p>
+                )}
+              </div>
             </div>
-
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

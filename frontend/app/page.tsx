@@ -1,15 +1,21 @@
-import React from "react";
+'use client';
+import React, { useState } from "react";
 import Home from "./components/home/Home";
 import Menu from "./components/menu/Menu";
-import Dishes from './components/dishes/TopDishes'
+import TopDishes from './components/dishes/TopDishes';
 
 const Page = () => {
+  const [selectedCategory, setSelectedCategory] = useState("");
+
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+  };
+
   return (
     <>
       <Home />
-      <Menu />
-      <Dishes/>
-
+      <Menu onCategorySelect={handleCategorySelect} />
+      <TopDishes selectedCategory={selectedCategory} />
     </>
   );
 };

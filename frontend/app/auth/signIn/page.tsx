@@ -1,8 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { signIn } from '../../lib/services/authApi';
 
-const SignInPage = () => {
+// Add the props interface
+interface SignInPageProps {
+  onSignInSuccess?: () => void;
+}
+
+const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -11,6 +17,7 @@ const SignInPage = () => {
   const [showAnimation, setShowAnimation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [cookingAnimation, setCookingAnimation] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     setShowAnimation(true);
@@ -22,19 +29,79 @@ const SignInPage = () => {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
+
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
     setCookingAnimation(true);
     
-    // Simulate authentication process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsLoading(false);
-    setCookingAnimation(false);
-    // Handle actual sign-in logic here
+    try {
+      const result = await signIn({
+        email: formData.email,
+        password: formData.password
+      });
+      
+      // Set the account flag (in case user signed up but flag wasn't set)
+      localStorage.setItem('hasAccount', 'true');
+      
+      // Handle success
+      if (onSignInSuccess) {
+        // If callback provided, use it
+        onSignInSuccess();
+      } else {
+        // Otherwise redirect to home
+        window.location.href = '/';
+      }
+      
+    } catch (error) {
+      console.error('Signin error:', error);
+      
+      // Handle specific error messages
+      if (error.message.includes('Invalid credentials')) {
+        setErrors({ 
+          general: 'Invalid email or password. Please try again.' 
+        });
+      } else if (error.message.includes('Account is deactivated')) {
+        setErrors({ 
+          general: 'Your account has been deactivated. Please contact support.' 
+        });
+      } else {
+        setErrors({ 
+          general: error.message || 'Something went wrong. Please try again.' 
+        });
+      }
+    } finally {
+      setIsLoading(false);
+      setCookingAnimation(false);
+    }
   };
 
   return (
@@ -104,6 +171,18 @@ const SignInPage = () => {
 
           <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
             
+            {/* Error Message */}
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                  </svg>
+                  <p className="text-sm text-red-700 font-medium">{errors.general}</p>
+                </div>
+              </div>
+            )}
+            
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -117,20 +196,27 @@ const SignInPage = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 pl-12 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-300 placeholder-gray-400 group-hover:border-orange-300"
+                  className={`w-full px-4 pl-12 py-4 border-2 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 placeholder-gray-400 group-hover:border-orange-300 ${
+                    errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-orange-500'
+                  }`}
                   placeholder="your@email.com"
                 />
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center">
-                  <svg className="w-6 h-6 text-gray-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-6 h-6 transition-colors ${
+                    errors.email ? 'text-red-500' : 'text-gray-400 group-hover:text-orange-500'
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                {formData.email && (
+                {formData.email && !errors.email && (
                   <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
                   </div>
                 )}
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -154,20 +240,27 @@ const SignInPage = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 pl-12 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-300 placeholder-gray-400 group-hover:border-orange-300"
+                  className={`w-full px-4 pl-12 py-4 border-2 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 placeholder-gray-400 group-hover:border-orange-300 ${
+                    errors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-orange-500'
+                  }`}
                   placeholder="Enter your password"
                 />
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center">
-                  <svg className="w-6 h-6 text-gray-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-6 h-6 transition-colors ${
+                    errors.password ? 'text-red-500' : 'text-gray-400 group-hover:text-orange-500'
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                {formData.password && (
+                {formData.password && !errors.password && (
                   <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
                   </div>
                 )}
               </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
 
             {/* Remember Me & Quick Actions */}
@@ -190,14 +283,28 @@ const SignInPage = () => {
               <div className="flex space-x-2">
                 <button
                   type="button"
-                  onClick={() => setFormData({ email: 'demo@tamato.com', password: 'demo123', rememberMe: false })}
+                  onClick={() => {
+                    setFormData({ 
+                      email: 'demo@tamato.com', 
+                      password: 'demo123', 
+                      rememberMe: false 
+                    });
+                    setErrors({});
+                  }}
                   className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-lg hover:bg-orange-200 transition-colors"
                 >
                   Demo User
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData({ email: 'admin@tamato.com', password: 'admin123', rememberMe: false })}
+                  onClick={() => {
+                    setFormData({ 
+                      email: 'admin@tamato.com', 
+                      password: 'admin123', 
+                      rememberMe: false 
+                    });
+                    setErrors({});
+                  }}
                   className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg hover:bg-red-200 transition-colors"
                 >
                   Admin

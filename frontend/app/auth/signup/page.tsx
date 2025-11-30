@@ -1,8 +1,14 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { signUp, signIn } from '../../lib/services/authApi';
 
-const SignupForm = () => {
+// Add the props interface
+interface SignupFormProps {
+  onSignupSuccess?: () => void;
+}
+
+const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -13,6 +19,7 @@ const SignupForm = () => {
   const [deliveryMessage, setDeliveryMessage] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     setShowDelivery(true);
@@ -24,6 +31,11 @@ const SignupForm = () => {
       ...formData,
       [name]: value
     });
+
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
 
     // Password strength calculation
     if (name === 'password') {
@@ -46,16 +58,96 @@ const SignupForm = () => {
     setDeliveryMessage(messages[fieldName]);
   };
 
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[A-Z])/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter';
+    } else if (!/(?=.*[0-9])/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one number';
+    } else if (!/(?=.*[^A-Za-z0-9])/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one special character';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      setDeliveryMessage("Please fix the errors above to continue 🚚");
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simulate delivery animation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setDeliveryMessage("Welcome to Tamato! Your first delivery is on the way! 🚚");
-    setIsSubmitting(false);
-    // Handle actual signup logic here
+    setDeliveryMessage("Creating your account... 🚚");
+
+    try {
+      // Call the signup API
+      const signupResult = await signUp(formData);
+      
+      setDeliveryMessage("Account created! Logging you in... 🚚");
+      
+      // Auto-login after successful signup
+      const loginResult = await signIn({
+        email: formData.email,
+        password: formData.password
+      });
+      
+      setDeliveryMessage("Welcome to Tamato! Your first delivery is on the way! 🚚");
+      
+      // Set the account flag
+      localStorage.setItem('hasAccount', 'true');
+      
+      // Wait a moment to show success message, then handle redirect
+      setTimeout(() => {
+        if (onSignupSuccess) {
+          // If callback provided, use it
+          onSignupSuccess();
+        } else {
+          // Otherwise redirect to home
+          window.location.href = '/';
+        }
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Signup error:', error);
+      
+      // Handle specific error messages
+      if (error.message.includes('User with this email already exists')) {
+        setDeliveryMessage("This email is already registered. Please sign in instead! 🚚");
+        setErrors(prev => ({ ...prev, email: 'Email already exists' }));
+      } else if (error.message.includes('Passwords do not match')) {
+        setDeliveryMessage("Passwords don't match. Please check and try again! 🚚");
+        setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+      } else {
+        setDeliveryMessage(error.message || "Something went wrong. Please try again! 🚚");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getStrengthColor = (strength) => {
@@ -69,7 +161,7 @@ const SignupForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 py-12  px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         
         {/* Animated Delivery Truck */}
@@ -190,7 +282,9 @@ const SignupForm = () => {
                   value={formData.fullName}
                   onChange={handleChange}
                   onFocus={() => handleInputFocus('fullName')}
-                  className="w-full px-4 pl-11 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400"
+                  className={`w-full px-4 pl-11 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400 ${
+                    errors.fullName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Enter your full name"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
@@ -198,12 +292,15 @@ const SignupForm = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
-                {formData.fullName && (
+                {formData.fullName && !errors.fullName && (
                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
                   </div>
                 )}
               </div>
+              {errors.fullName && (
+                <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
+              )}
             </div>
 
             {/* Email with Mail Icon */}
@@ -220,7 +317,9 @@ const SignupForm = () => {
                   value={formData.email}
                   onChange={handleChange}
                   onFocus={() => handleInputFocus('email')}
-                  className="w-full px-4 pl-11 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400"
+                  className={`w-full px-4 pl-11 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400 ${
+                    errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Enter your email"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
@@ -229,6 +328,9 @@ const SignupForm = () => {
                   </svg>
                 </div>
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
 
             {/* Password with Lock Icon and Strength Meter */}
@@ -245,7 +347,9 @@ const SignupForm = () => {
                   value={formData.password}
                   onChange={handleChange}
                   onFocus={() => handleInputFocus('password')}
-                  className="w-full px-4 pl-11 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400"
+                  className={`w-full px-4 pl-11 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400 ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Create a password"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
@@ -279,6 +383,9 @@ const SignupForm = () => {
                   </div>
                 </div>
               )}
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
 
             {/* Confirm Password with Check Icon */}
@@ -295,7 +402,9 @@ const SignupForm = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   onFocus={() => handleInputFocus('confirmPassword')}
-                  className="w-full px-4 pl-11 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400"
+                  className={`w-full px-4 pl-11 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder-gray-400 ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Confirm your password"
                 />
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
@@ -304,6 +413,9 @@ const SignupForm = () => {
                   </svg>
                 </div>
               </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              )}
             </div>
 
             {/* Animated Submit Button with Delivery Theme */}
