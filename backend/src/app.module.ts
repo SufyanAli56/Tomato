@@ -5,6 +5,9 @@ import { RecipesModule } from './recipes/recipes.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { OrderModule } from './order//order.module';
+import { PaymentsModule } from './payments/payments.module';
+import { MenuModule } from './menu/menu.module';
 
 @Module({
   imports: [
@@ -14,6 +17,9 @@ import { AuthModule } from './auth/auth.module';
     MongooseModule.forRoot('mongodb://localhost:27017/new-recipe-app'),
     RecipesModule,
     AuthModule,
+    OrderModule,
+    PaymentsModule,
+    MenuModule,
   ],
   controllers: [AppController],
   providers: [AppService],
