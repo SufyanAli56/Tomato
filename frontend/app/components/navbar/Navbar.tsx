@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { MagnifyingGlassIcon, ShoppingCartIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { Crown } from 'lucide-react';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,6 +35,7 @@ const Navbar = () => {
     { label: "Recipes", href: "/pages/recipes" },
     { label: "About", href: "/pages/about" },
     { label: "Contact", href: "/pages/contact" },
+    { label: "Loyalty", href: "/loyalty", icon: Crown },
   ];
 
   return ( 
@@ -56,7 +58,12 @@ const Navbar = () => {
                 href={item.href}
                 className="group relative text-gray-700 font-light tracking-wide px-1 transition-all duration-300 hover:text-orange-600"
               >
-                {item.label}
+                {item.label === "Loyalty" ? (
+                  <div className="flex items-center gap-1">
+                    {item.icon && <item.icon className="w-4 h-4 text-yellow-500" />}
+                    <span>{item.label}</span>
+                  </div>
+                ) : item.label}
                 <span className="absolute left-1/2 -bottom-1 h-[2px] w-0 bg-orange-600 transition-all duration-300 group-hover:w-full group-hover:left-0"></span>
               </Link>
             ))}
@@ -113,28 +120,46 @@ const Navbar = () => {
               <Link 
                 key={item.label} 
                 href={item.href} 
-                className="text-gray-700 text-lg py-2"
+                className="text-gray-700 text-lg py-2 flex items-center gap-2"
                 onClick={() => setIsMenuOpen(false)}
               >
+                {item.label === "Loyalty" && item.icon && (
+                  <item.icon className="w-4 h-4 text-yellow-500" />
+                )}
                 {item.label}
               </Link>
             ))}
-            {isAuthenticated ? (
-              <button
-                onClick={handleLogout}
-                className="bg-white border border-orange-500 text-orange-600 font-semibold px-6 py-2 rounded-full transition hover:bg-orange-50 text-left"
-              >
-                Logout
-              </button>
-            ) : (
-              <Link
-                href={hasAccount ? "/auth/signIn" : "/auth/signup"}
-                className="bg-white border border-orange-500 text-orange-600 font-semibold px-6 py-2 rounded-full transition hover:bg-orange-50 text-center"
+            
+            <div className="flex flex-col space-y-4 pt-4 border-t">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="bg-white border border-orange-500 text-orange-600 font-semibold px-6 py-2 rounded-full transition hover:bg-orange-50 text-left"
+                >
+                  Logout
+                </button>
+              ) : (
+                <Link
+                  href={hasAccount ? "/auth/signIn" : "/auth/signup"}
+                  className="bg-white border border-orange-500 text-orange-600 font-semibold px-6 py-2 rounded-full transition hover:bg-orange-50 text-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {hasAccount ? "Sign In" : "Get Started"}
+                </Link>
+              )}
+              
+              <Link 
+                href="/loyalty" 
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 hover:from-purple-100 hover:to-pink-100 transition-all text-center justify-center"
                 onClick={() => setIsMenuOpen(false)}
               >
-                {hasAccount ? "Sign In" : "Get Started"}
+                <Crown className="w-4 h-4 text-yellow-500" />
+                <span className="font-medium">Loyalty Program</span>
               </Link>
-            )}
+            </div>
           </div>
         </div>
       )}
